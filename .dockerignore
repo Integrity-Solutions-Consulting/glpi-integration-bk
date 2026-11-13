@@ -1,5 +1,6 @@
 .env
 .git
+.env.example
 *.log
 data
 validacion-integracion.json
