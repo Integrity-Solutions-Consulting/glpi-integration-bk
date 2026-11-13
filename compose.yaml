@@ -26,5 +26,13 @@ services:
       service: revision
     command: node src/transfer.mjs
 
+  automatizacion:
+    extends:
+      service: revision
+    command: node src/auto-sync.mjs
+    environment:
+      SYNC_INTERVAL_MINUTES: ${SYNC_INTERVAL_MINUTES:-15}
+    restart: unless-stopped
+
 volumes:
   tmr_glpi_sync_data:
