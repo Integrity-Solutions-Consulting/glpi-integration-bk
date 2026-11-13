@@ -1,0 +1,30 @@
+services:
+  revision:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      SYNC_DATA_DIR: /app/data
+      SYNC_MODE: ${SYNC_MODE:-PREVALIDACION}
+      PILOT_TMR_USER_ID: ${PILOT_TMR_USER_ID:-}
+    command: node src/app.mjs
+    restart: "no"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    volumes:
+      - tmr_glpi_sync_data:/app/data
+
+  transferencia:
+    extends:
+      service: revision
+    command: node src/transfer.mjs
+
+volumes:
+  tmr_glpi_sync_data:

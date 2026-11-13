@@ -1,0 +1,36 @@
+ETAPA 1: REVISION, SIN SINCRONIZACION NI ESCRITURA
+
+1. Extraer este paquete en una carpeta tmr-glpi-sync.
+2. Copiar .env.example a .env y completar los valores despues de =.
+   TMR_USER: correo de la cuenta de integracion de TMR.
+   TMR_PASSWORD: su contraseña.
+   GLPI_CLIENT_ID / GLPI_CLIENT_SECRET: cliente OAuth tmr-glpi-sync.
+   GLPI_USER: tmr-sync.
+   GLPI_PASSWORD: contraseña de ese usuario de GLPI.
+   Mantener las URLs y SUPPORT_PROJECT_CODE si son correctos.
+   No publicar .env ni compartirlo en el chat.
+   Compose admite valores entre comillas simples; usarlas si una clave contiene $ o #.
+3. Con Docker Desktop abierto, abrir PowerShell en esta carpeta.
+4. Ejecutar: docker compose run --rm --build revision
+
+La prueba autentica y consulta por HTTPS. No publica puertos ni se conecta a las bases.
+Solo los dos POST de autenticacion son permitidos por esta implementacion.
+No hay rutas de escritura de usuarios, perfiles o proyectos.
+Los logs solo muestran identificadores y propuestas, no nombres, correos ni claves.
+Son datos internos: compartir solo el resumen y los errores necesarios.
+
+LIMITES
+- No habilita inicio de sesion compartido con TMR.
+- No concede perfiles ni crea grupos/proyectos/usuarios.
+- Una cuenta existente requiere vinculacion explicita, no basta coincidir por correo.
+- Los lideres no exponen IdPersona en la API actual: se proponen candidatos por correo
+  para revision humana; no se concede supervisor automaticamente.
+- La prioridad de proyectos requiere acordar su fuente; no se deduce del nombre.
+- El catalogo GLPI puede no exponer todos los correos; validar contra los datos reales.
+- Esta version se detiene si no entiende la respuesta o la paginacion.
+
+DOKPLOY (DESPUES DE VALIDAR)
+Subir estos fuentes sin .env a un repositorio propio y crear una Application desde Git
+con este Dockerfile. Poner las mismas variables en Environment. No configurar dominio
+ni puertos. Por ahora es una ejecucion unica de revision, no un servicio continuo.
+No modificar el backend TMR ni los Compose actuales de GLPI.

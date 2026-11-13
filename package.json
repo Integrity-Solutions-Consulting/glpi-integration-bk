@@ -1,0 +1,15 @@
+{
+  "name": "tmr-glpi-sync",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.mjs",
+    "test": "node --test",
+    "transfer": "node src/transfer.mjs",
+    "project-transfer": "node src/project-transfer.mjs",
+    "role-transfer": "node src/role-transfer.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

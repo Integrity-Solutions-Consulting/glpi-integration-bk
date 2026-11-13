@@ -1,0 +1,5 @@
+.env
+.git
+*.log
+data
+validacion-integracion.json
