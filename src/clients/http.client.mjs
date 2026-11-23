@@ -1,5 +1,5 @@
 
-const AUTH_PATHS=new Set(['/api/auth/login','/api.php/token']);
+const AUTH_PATHS=new Set(['/api/auth/login','/api/v1/auth/login','/api.php/token']);
 const METHODS=new Set(['GET','POST','PATCH','PUT']);
 const GLPI_USER_PATHS=new Set([
 '/api.php/v2.3/Administration/User'

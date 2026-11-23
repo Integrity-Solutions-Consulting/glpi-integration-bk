@@ -8,6 +8,9 @@ const required=[
     'GLPI_CLIENT_SECRET',
     'GLPI_USER',
     'GLPI_PASSWORD',
+    'INVENTORY_URL',
+    'INVENTORY_USER',
+    'INVENTORY_PASSWORD',
     'SUPPORT_PROJECT_CODE'
 ];
 
@@ -115,6 +118,10 @@ export function loadConfig(){
 
     const tmrUrl=validateURL('TMR_URL');
     const glpiUrl=validateURL('GLPI_URL');
+    const inventoryUrl=validateURL('INVENTORY_URL');
+    const inventoryAuthUrl=process.env.INVENTORY_AUTH_URL?.trim()
+        ?validateURL('INVENTORY_AUTH_URL')
+        :inventoryUrl;
 
     const mode=validateSyncMode();
     const enabled=readBoolean('SYNC_ENABLED',false);
@@ -162,6 +169,12 @@ export function loadConfig(){
             clientSecret:readRequired('GLPI_CLIENT_SECRET'),
             user:readRequired('GLPI_USER'),
             password:readRequired('GLPI_PASSWORD')
+        },
+        inventory:{
+            url:inventoryUrl,
+            authUrl:inventoryAuthUrl,
+            user:readRequired('INVENTORY_USER'),
+            password:readRequired('INVENTORY_PASSWORD')
         },
         supportProjectCode:readRequired('SUPPORT_PROJECT_CODE'),
         sync:{

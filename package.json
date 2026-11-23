@@ -8,6 +8,9 @@
     "transfer": "node src/transfer.mjs",
     "project-transfer": "node src/project-transfer.mjs",
     "role-transfer": "node src/role-transfer.mjs"
+    ,"equipment-transfer": "node src/equipment-transfer.mjs",
+    "equipment-details": "node src/equipment-details-sync.mjs",
+    "equipment-category-cleanup": "node src/equipment-category-cleanup.mjs"
   },
   "engines": {
     "node": ">=22"

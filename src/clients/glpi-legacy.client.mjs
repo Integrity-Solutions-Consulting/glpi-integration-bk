@@ -78,9 +78,9 @@ this.config=config;this.base=url.origin+'/apirest.php';this.token=null;this.cont
 }
 
 async call(path,{method='GET',body,authenticate=false}={}){
-if(!/^\/(initSession|killSession|getFullSession|changeActiveEntities|User(?:\/\d+(?:\/(?:UserEmail|Profile_User))?)?|Profile(?:\/\d+)?|Entity|Project(?:\/\d+)?)(?:\?|$)/.test(path)||
+if(!/^\/(initSession|killSession|getFullSession|changeActiveEntities|User(?:\/\d+(?:\/(?:UserEmail|Profile_User))?)?|Profile(?:\/\d+)?|Entity|Project(?:\/\d+)?|(?:Computer|Phone|Peripheral|Monitor)(?:\/\d+)?(?:\/Item_OperatingSystem)?|Manufacturer|ComputerModel|ComputerType|State|Location|OperatingSystem|PhoneModel|PhoneType|PeripheralModel|PeripheralType|MonitorModel|MonitorType)(?:\?|$)/.test(path)||
 path.includes('#')||path.includes('\\'))throw new Error('RUTA_LEGACY_NO_AUTORIZADA');
-if(method!=='GET'&&!(method==='POST'&&(['/User','/Project','/changeActiveEntities'].includes(path)||/^\/User\/\d+\/Profile_User$/.test(path))))throw new Error('METODO_LEGACY_NO_AUTORIZADO');
+if(method!=='GET'&&!(method==='POST'&&(['/User','/Project','/Computer','/Phone','/Peripheral','/Monitor','/Manufacturer','/ComputerModel','/ComputerType','/State','/Location','/OperatingSystem','/PhoneModel','/PhoneType','/PeripheralModel','/PeripheralType','/MonitorModel','/MonitorType','/changeActiveEntities'].includes(path)||/^\/User\/\d+\/Profile_User$/.test(path)||/^\/Computer\/\d+\/Item_OperatingSystem$/.test(path)))&&!(method==='PUT'&&/^\/(Computer|Phone|Peripheral|Monitor)\/\d+$/.test(path))&&!(method==='DELETE'&&/^\/(Computer|Phone|Peripheral|Monitor)\/\d+$/.test(path)))throw new Error('METODO_LEGACY_NO_AUTORIZADO');
 const headers={'Content-Type':'application/json',Accept:'application/json'};
 if(this.config.appToken)headers['App-Token']=this.config.appToken;
 if(authenticate){
@@ -150,7 +150,7 @@ const response=await this.call(`${path}${path.includes('?')?'&':'?'}range=${star
 const rows=response.data;
 if(!Array.isArray(rows))throw new Error('GLPI_LEGACY_LISTA_INVALIDA');
 const match=/^(?:\d+-(?:\d+|-1)|\*)\/(\d+)$/.exec(response.contentRange??'');
-if(!response.contentRange&&((rows.length===0&&(path.includes('is_deleted=true')||path==='/Project'))||path.includes('/User/'))){
+if(!response.contentRange&&((rows.length===0&&(path.includes('is_deleted=true')||path==='/Project'||['/Computer','/Phone','/Peripheral','/Monitor','/Manufacturer','/ComputerModel','/ComputerType','/State','/Location','/OperatingSystem','/PhoneModel','/PhoneType','/PeripheralModel','/PeripheralType','/MonitorModel','/MonitorType'].includes(path)))||path.includes('/User/'))){
 for(const row of rows){
 if(!numeric(row.id)||seen.has(String(row.id)))throw new Error('GLPI_LEGACY_ID_INVALIDO_O_DUPLICADO');
 seen.add(String(row.id));result.push(row);
@@ -197,6 +197,119 @@ async inventoryProjects(){
 await this.selectGlobalScope();
 if(!this.context.canReadProjects)throw new Error('GLPI_LEGACY_SIN_PERMISO_PROJECT_READ');
 return this.list('/Project');
+}
+
+async inventoryComputers(){
+await this.selectGlobalScope();
+return this.list('/Computer');
+}
+
+async inventoryAssets(path){
+if(!['/Computer','/Phone','/Peripheral','/Monitor'].includes(path))throw new Error('TIPO_ACTIVO_GLPI_INVALIDO');
+await this.selectGlobalScope();
+return this.list(path);
+}
+
+async inventoryCatalogs(){
+await this.selectGlobalScope();
+const [manufacturers,models,types,states,locations,operatingSystems]=await Promise.all([
+this.list('/Manufacturer'),
+this.list('/ComputerModel'),
+this.list('/ComputerType'),
+this.list('/State'),
+this.list('/Location'),
+this.list('/OperatingSystem')
+]);
+return {manufacturers,models,types,states,locations,operatingSystems};
+}
+
+async inventoryCatalog(path){
+const allowed=['/Manufacturer','/ComputerModel','/ComputerType','/PhoneModel','/PhoneType','/PeripheralModel','/PeripheralType','/MonitorModel','/MonitorType','/State','/Location','/OperatingSystem'];
+if(!allowed.includes(path))throw new Error('CATALOGO_GLPI_INVALIDO');
+await this.selectGlobalScope();
+return this.list(path);
+}
+
+async createCatalogValue(path,name){
+if(!['/Manufacturer','/ComputerModel','/ComputerType','/PhoneModel','/PhoneType','/PeripheralModel','/PeripheralType','/MonitorModel','/MonitorType','/State','/Location','/OperatingSystem'].includes(path)||!String(name??'').trim())throw new Error('CATALOGO_GLPI_INVALIDO');
+await this.selectGlobalScope();
+const {data}=await this.call(path,{method:'POST',body:{input:{name:String(name).trim().slice(0,255)}}});
+if(!positive(data?.id))throw new Error(`ALTA_CATALOGO_SIN_ID:${path}`);
+return Number(data.id);
+}
+
+async createComputer(input){
+await this.selectGlobalScope();
+if(!this.context.canCreate)throw new Error('GLPI_LEGACY_SIN_PERMISO_CREATE');
+const {data}=await this.call('/Computer',{method:'POST',body:{input}});
+if(!positive(data?.id))throw new Error('ALTA_COMPUTER_SIN_ID_RESULTADO_INCIERTO');
+return Number(data.id);
+}
+
+async createAsset(path,input){
+if(!['/Computer','/Phone','/Peripheral','/Monitor'].includes(path))throw new Error('TIPO_ACTIVO_GLPI_INVALIDO');
+await this.selectGlobalScope();
+if(!this.context.canCreate)throw new Error('GLPI_LEGACY_SIN_PERMISO_CREATE');
+const {data}=await this.call(path,{method:'POST',body:{input}});
+if(!positive(data?.id))throw new Error(`ALTA_ACTIVO_SIN_ID:${path}`);
+return Number(data.id);
+}
+
+async verifyAsset(path,id,input){
+if(!positive(id))throw new Error('ID_ACTIVO_INVALIDO');
+const {data}=await this.call(`${path}/${id}`);
+if(String(data?.id)!==String(id)||String(data?.name??'')!==String(input.name??'')||String(data?.serial??'')!==String(input.serial??'')||String(data?.otherserial??'')!==String(input.otherserial??'')||String(data?.comment??'')!==String(input.comment??''))throw new Error('ALTA_ACTIVO_GLPI_INCOMPLETA_REQUIERE_REVISION');
+return data;
+}
+
+async updateComputer(id,input){
+if(!positive(id))throw new Error('ID_COMPUTER_INVALIDO');
+await this.selectGlobalScope();
+const {data}=await this.call(`/Computer/${id}`,{method:'PUT',body:{input}});
+return data;
+}
+
+async updateAsset(path,id,input){
+if(!['/Computer','/Phone','/Peripheral','/Monitor'].includes(path)||!positive(id))throw new Error('ACTIVO_GLPI_INVALIDO');
+await this.selectGlobalScope();
+const {data}=await this.call(`${path}/${id}`,{method:'PUT',body:{input}});
+return data;
+}
+
+async deleteComputer(id){
+if(!positive(id))throw new Error('ID_COMPUTER_INVALIDO');
+await this.selectGlobalScope();
+const {data}=await this.call(`/Computer/${id}`,{method:'DELETE'});
+return data;
+}
+
+async setComputerOperatingSystem(computerId,operatingSystemId){
+if(!positive(computerId)||!positive(operatingSystemId))throw new Error('SISTEMA_OPERATIVO_GLPI_INVALIDO');
+await this.selectGlobalScope();
+const path=`/Computer/${computerId}/Item_OperatingSystem`;
+const current=await this.call(path);
+const existing=Array.isArray(current.data)?current.data:[];
+if(existing.some(row=>Number(row?.operatingsystems_id)===Number(operatingSystemId)))return existing.find(row=>Number(row?.operatingsystems_id)===Number(operatingSystemId));
+const {data}=await this.call(path,{method:'POST',body:{input:{items_id:Number(computerId),itemtype:'Computer',operatingsystems_id:Number(operatingSystemId)}}});
+const rows=Array.isArray(data)?data:[data];
+if(!rows.length&&!data)throw new Error('SISTEMA_OPERATIVO_GLPI_SIN_RESULTADO');
+return rows[0]??data;
+}
+
+async verifyCreatedComputer(id,input){
+if(!positive(id))throw new Error('ID_COMPUTER_CREADO_INVALIDO');
+const {data}=await this.call(`/Computer/${id}`);
+if(String(data?.id)!==String(id)||String(data?.name??'')!==String(input.name??'')||
+String(data?.serial??'')!==String(input.serial??'')||String(data?.otherserial??'')!==String(input.otherserial??'')||
+String(data?.comment??'')!==String(input.comment??'')){
+throw new Error('ALTA_COMPUTER_GLPI_INCOMPLETA_REQUIERE_REVISION');
+}
+for(const field of ['manufacturers_id','computermodels_id','computertypes_id','states_id','locations_id']){
+if(input[field]!==undefined&&Number(data?.[field]??0)!==Number(input[field])){
+throw new Error(`ALTA_COMPUTER_GLPI_CAMPO_INCOMPLETO:${field}`);
+}
+}
+return data;
 }
 
 async verifyCreatedProject(id,input){

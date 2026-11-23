@@ -2,6 +2,7 @@
 import {pathToFileURL} from 'node:url';
 import {loadConfig} from './config/env.mjs';
 import {TMRClient} from './clients/tmr.client.mjs';
+import {InventoryClient} from './clients/inventory.client.mjs';
 import {GLPIClient} from './clients/glpi.client.mjs';
 import {propose} from './services/proposal.service.mjs';
 import {todayEcuador} from './utils/dates.mjs';
@@ -736,9 +737,13 @@ log('CONFIGURACION_SINCRONIZACION',syncConfig);
 
 const tmr=new TMRClient(config.tmr);
 const glpi=new GLPIClient(config.glpi);
+const inventory=new InventoryClient(config.inventory);
 
 console.log('AUTENTICANDO_TMR');
 await tmr.authenticate();
+
+console.log('AUTENTICANDO_INVENTORY');
+await inventory.authenticate();
 
 console.log('AUTENTICANDO_GLPI');
 await glpi.authenticate();
@@ -775,6 +780,12 @@ diagnosticoPreparacion
 console.log('CONSULTANDO_DATOS_REALES_TMR');
 
 const tmrData=await loadTMRData(tmr);
+
+console.log('CONSULTANDO_EQUIPOS_INVENTORY');
+const inventoryEquipment=await inventory.getEquipment();
+if(!Array.isArray(inventoryEquipment)){
+throw new Error('LISTADO_EQUIPOS_INVENTORY_INVALIDO');
+}
 
 const users=tmrData.usuarios;
 const employees=tmrData.colaboradores;
@@ -825,7 +836,8 @@ colaboradores:employees.length,
 lideres:leaders.length,
 proyectos:projects.length,
 rolesTMR:roles?.length??null,
-usuariosGLPI:existing.length
+usuariosGLPI:existing.length,
+equiposInventory:inventoryEquipment.length
 });
 
 console.log('GENERANDO_PROPUESTAS');
@@ -997,6 +1009,7 @@ const finalSummary={
 usuariosTMR:users.length,
 rolesTMR:roles?.length??null,
 usuariosGLPI:existing.length,
+equiposInventory:inventoryEquipment.length,
 propuestas:report.length,
 operacionesPlanificadas:syncPlan.length,
 vinculaciones:mapping.getAll().length,
@@ -1057,6 +1070,7 @@ syncPlan,
 syncResult,
 pilotResult,
 finalSummary,
+inventoryEquipment,
 tmrDiagnostics:{
 rolesAvailable:Array.isArray(roles),
 rolesCount:roles?.length??null
