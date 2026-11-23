@@ -7,7 +7,7 @@ services:
       - .env
     environment:
       SYNC_DATA_DIR: /app/data
-      SYNC_MODE: ${SYNC_MODE:-PREVALIDACION}
+      SYNC_MODE: ${SYNC_MODE:-REAL}
       PILOT_TMR_USER_ID: ${PILOT_TMR_USER_ID:-}
     command: node src/app.mjs
     restart: "no"

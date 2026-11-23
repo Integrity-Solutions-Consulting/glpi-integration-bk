@@ -12,7 +12,7 @@ import {auditTransfer} from './services/transfer-audit.service.mjs';
 import {propose} from './services/proposal.service.mjs';
 import {buildSyncPlan} from './services/sync-plan.service.mjs';
 import {todayEcuador} from './utils/dates.mjs';
-import {getTMRLogin,getTMREmail,identityOverlaps,findTMRDuplicates} from './utils/identity.mjs';
+import {getTMRLogin,getTMREmail,getGLPILogin,getGLPIEmails,identityOverlaps,findTMRDuplicates} from './utils/identity.mjs';
 
 const log=(name,value)=>console.log(name+' '+JSON.stringify(value));
 const tmrId=user=>String(user.idUsuario??user.id);
@@ -90,6 +90,32 @@ continue;
 }
 if(reconciled?.action==='YA_VINCULADO'){
 result.alreadyLinked++;record('YA_VINCULADO',null,{glpiUserId:reconciled.glpiUserId});continue;
+}
+// Existing GLPI accounts can be adopted automatically only when both stable
+// identities match exactly and there is exactly one destination candidate.
+// This repairs missing historical mappings without guessing from names.
+if(reconciled?.action==='REVISAR_MANUALMENTE'&&
+reconciled.reasons.length===1&&
+reconciled.reasons[0]==='CUENTA_GLPI_EXISTENTE_SIN_VINCULO'&&
+user.activo===true){
+const login=getTMRLogin(user);
+const email=getTMREmail(user);
+const exactMatches=existing.filter(target=>
+getGLPILogin(target)===login&&getGLPIEmails(target).has(email)
+);
+if(exactMatches.length===1&&mapping.getByGLPI(exactMatches[0].id)===null){
+try{
+await mapping.register({tmrUserId:id,personaId:user.idPersona,glpiUserId:exactMatches[0].id,
+login,email,verified:true});
+result.alreadyLinked++;
+record('VINCULADO_EXISTENTE_VERIFICADO',null,{glpiUserId:exactMatches[0].id});
+continue;
+}catch(error){
+record('REVISAR',error.message);
+result.review++;
+continue;
+}
+}
 }
 if(reconciled?.action!=='CREAR_CANDIDATO'||operation?.action!=='CREAR_CANDIDATO'){
 result.review++;record('REVISAR',reconciled?.reasons[0]??operation?.reason??'IDENTIDAD_NO_VERIFICADA');continue;

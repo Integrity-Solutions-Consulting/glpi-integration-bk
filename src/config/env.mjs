@@ -143,19 +143,11 @@ export function loadConfig(){
         );
     }
 
-    if(realRequested&&!allowedTmrUserId){
-        throw new Error(
-            'La primera ejecucion real requiere SYNC_ALLOWED_TMR_USER_ID.'
-        );
-    }
-
-    if(realRequested&&maxWrites!==1){
-        throw new Error(
-            'La primera ejecucion real permite solamente SYNC_MAX_WRITES=1.'
-        );
-    }
-
-    const writesEnabled=false;
+    // In REAL mode the transfer runner reconciles every TMR user and uses the
+    // durable mapping/journal plus identity checks to avoid duplicate writes.
+    // An optional ID remains available for an explicit one-user run, but the
+    // automatic service must not depend on a hard-coded user ID.
+    const writesEnabled=realRequested;
 
     const config={
         tmr:{
