@@ -4,9 +4,13 @@ import {runRoleTransfer} from './role-transfer.mjs';
 import {runEquipmentTransfer} from './equipment-transfer.mjs';
 import {runEquipmentDetailsSync} from './equipment-details-sync.mjs';
 
-const rawInterval=Number(process.env.SYNC_INTERVAL_MINUTES??5);
-if(!Number.isSafeInteger(rawInterval)||rawInterval<1||rawInterval>1440){
-throw new Error('SYNC_INTERVAL_MINUTES debe estar entre 1 y 1440.');
+const rawSeconds=Number(process.env.SYNC_INTERVAL_SECONDS??'');
+const rawMinutes=Number(process.env.SYNC_INTERVAL_MINUTES??5);
+const intervalSeconds=process.env.SYNC_INTERVAL_SECONDS?.trim()
+    ?rawSeconds
+    :rawMinutes*60;
+if(!Number.isSafeInteger(intervalSeconds)||intervalSeconds<1||intervalSeconds>86400){
+throw new Error('SYNC_INTERVAL_SECONDS debe estar entre 1 y 86400.');
 }
 const maxCreates=Number(process.env.SYNC_MAX_WRITES??1000);
 const maxEquipmentCreates=Number(process.env.EQUIPMENT_MAX_WRITES??1000);
@@ -14,7 +18,7 @@ const maxEquipmentUpdates=Number(process.env.EQUIPMENT_DETAIL_MAX_WRITES??1000);
 for(const [name,value] of [['SYNC_MAX_WRITES',maxCreates],['EQUIPMENT_MAX_WRITES',maxEquipmentCreates],['EQUIPMENT_DETAIL_MAX_WRITES',maxEquipmentUpdates]]){
 if(!Number.isSafeInteger(value)||value<1||value>1000)throw new Error(`${name} debe estar entre 1 y 1000.`);
 }
-const intervalMs=rawInterval*60*1000;
+const intervalMs=intervalSeconds*1000;
 let stopping=false;
 let running=false;
 
@@ -22,7 +26,7 @@ async function cycle(){
 if(stopping||running)return;
 running=true;
 const startedAt=new Date().toISOString();
-console.log('SINCRONIZACION_AUTOMATICA_INICIO '+JSON.stringify({startedAt,intervalMinutes:rawInterval}));
+console.log('SINCRONIZACION_AUTOMATICA_INICIO '+JSON.stringify({startedAt,intervalSeconds}));
 try{
 const users=await runTransfer({apply:true,maxCreates});
 const projects=await runProjectTransfer({apply:true,maxCreates});

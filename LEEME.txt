@@ -12,8 +12,10 @@ minutos por defecto. En cada ciclo sincroniza:
 - equipos del inventario;
 - detalles de equipos, catalogos, estados, ubicaciones y caracteristicas.
 
-El intervalo puede cambiarse con `SYNC_INTERVAL_MINUTES`, pero el valor
-recomendado es 5. Los limites de escritura son `SYNC_MAX_WRITES`,
+El intervalo puede cambiarse con `SYNC_INTERVAL_MINUTES`. Para pruebas,
+`SYNC_INTERVAL_SECONDS` tiene prioridad; actualmente esta configurado en 5
+segundos. Antes de produccion debe eliminarse o dejarse vacio para volver a
+5 minutos. Los limites de escritura son `SYNC_MAX_WRITES`,
 `EQUIPMENT_MAX_WRITES` y `EQUIPMENT_DETAIL_MAX_WRITES`.
 
 La limpieza de categorias no se ejecuta automaticamente porque puede eliminar
