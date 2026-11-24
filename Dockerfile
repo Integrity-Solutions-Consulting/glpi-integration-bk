@@ -13,4 +13,4 @@ RUN mkdir -p /app/data && chown node:node /app/data
 
 USER node
 
-CMD ["node","src/app.mjs"]
+CMD ["node","src/auto-sync.mjs"]

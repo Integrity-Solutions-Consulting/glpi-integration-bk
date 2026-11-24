@@ -3,6 +3,10 @@ import {runProjectTransfer} from './project-transfer.mjs';
 import {runRoleTransfer} from './role-transfer.mjs';
 import {runEquipmentTransfer} from './equipment-transfer.mjs';
 import {runEquipmentDetailsSync} from './equipment-details-sync.mjs';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {join,resolve} from 'node:path';
+
+try{process.loadEnvFile('.env');}catch(error){if(error.code!=='ENOENT')throw error;}
 
 const rawSeconds=Number(process.env.SYNC_INTERVAL_SECONDS??'');
 const rawMinutes=Number(process.env.SYNC_INTERVAL_MINUTES??5);
@@ -27,6 +31,11 @@ if(stopping||running)return;
 running=true;
 const startedAt=new Date().toISOString();
 console.log('SINCRONIZACION_AUTOMATICA_INICIO '+JSON.stringify({startedAt,intervalSeconds}));
+const directory=resolve(process.env.SYNC_DATA_DIR??'./data');
+const heartbeat=async value=>{
+await mkdir(directory,{recursive:true,mode:0o700});
+await writeFile(join(directory,'last-automatic-sync.json'),JSON.stringify(value,null,2)+'\n',{mode:0o600});
+};
 try{
 const users=await runTransfer({apply:true,maxCreates});
 const projects=await runProjectTransfer({apply:true,maxCreates});
@@ -40,8 +49,15 @@ roles:{assigned:roles.assigned,alreadyLinked:roles.alreadyLinked,review:roles.re
 equipment:{created:equipment.created,review:equipment.review},
 equipmentDetails:{updated:equipmentDetails.updated,review:equipmentDetails.review}
 }));
+await heartbeat({status:'OK',startedAt,finishedAt:new Date().toISOString(),intervalSeconds,
+users:{created:users.created,alreadyLinked:users.alreadyLinked,review:users.review},
+projects:{created:projects.created,alreadyLinked:projects.alreadyLinked,review:projects.review},
+roles:{assigned:roles.assigned,alreadyLinked:roles.alreadyLinked,review:roles.review,skipped:roles.skipped},
+equipment:{created:equipment.created,review:equipment.review},
+equipmentDetails:{updated:equipmentDetails.updated,review:equipmentDetails.review}});
 }catch(error){
 console.error('SINCRONIZACION_AUTOMATICA_ERROR '+error.message);
+await heartbeat({status:'ERROR',startedAt,finishedAt:new Date().toISOString(),intervalSeconds,error:error.message}).catch(()=>{});
 }finally{running=false;}
 }
 

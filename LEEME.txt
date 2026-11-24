@@ -21,6 +21,9 @@ segundos. Antes de produccion debe eliminarse o dejarse vacio para volver a
 La limpieza de categorias no se ejecuta automaticamente porque puede eliminar
 activos de GLPI. Esa operacion continua siendo manual.
 
+El archivo `data/last-automatic-sync.json` confirma el ultimo ciclo. Su campo
+`status` debe ser `OK`; si es `ERROR`, revisar `error` y los logs del contenedor.
+
 REQUISITOS ANTES DE ACTIVAR
 
 1. Copiar `.env.example` a `.env` y completar las credenciales de TMR,
@@ -48,7 +51,9 @@ forma controlada se pueden usar los comandos de `TRANSFERENCIA.md`.
 
 ACTIVACION CONTINUA
 
-En Dokploy desplegar el servicio `automatizacion`, sin dominio ni puertos.
+En Dokploy desplegar la aplicacion desde este repositorio y reconstruir la
+imagen. El `Dockerfile` ya inicia `src/auto-sync.mjs`; si se usa Docker Compose,
+desplegar el servicio `automatizacion`, sin dominio ni puertos.
 Con Docker local:
 
     docker compose up -d --build automatizacion

@@ -56,7 +56,9 @@ docker compose run --rm transferencia node src/transfer.mjs --apply --max=1
 docker compose run --rm transferencia node src/transfer.mjs --apply --max=200
 ```
 
-Para ejecución automática en Dokploy, despliega el servicio `automatizacion`.
+Para ejecución automática en Dokploy, despliega la aplicación desde este
+repositorio y reconstruye la imagen; el `Dockerfile` inicia `auto-sync.mjs`.
+Si se usa Docker Compose, despliega el servicio `automatizacion`.
 Ejecuta usuarios, proyectos, perfiles, equipos y detalles de equipos cada
 `SYNC_INTERVAL_MINUTES` minutos (5 por defecto) y se reinicia automáticamente
 si el contenedor se detiene. Para pruebas, `SYNC_INTERVAL_SECONDS` tiene
