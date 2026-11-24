@@ -57,8 +57,14 @@ docker compose run --rm transferencia node src/transfer.mjs --apply --max=200
 ```
 
 Para ejecución automática en Dokploy, despliega el servicio `automatizacion`.
-Ejecuta usuarios, proyectos y perfiles cada `SYNC_INTERVAL_MINUTES` minutos
-(15 por defecto) y se reinicia automáticamente si el contenedor se detiene.
+Ejecuta usuarios, proyectos, perfiles, equipos y detalles de equipos cada
+`SYNC_INTERVAL_MINUTES` minutos (5 por defecto) y se reinicia automáticamente
+si el contenedor se detiene. Los límites se controlan con `SYNC_MAX_WRITES`,
+`EQUIPMENT_MAX_WRITES` y `EQUIPMENT_DETAIL_MAX_WRITES`.
+
+La limpieza de categorías (`equipment-category-cleanup`) no forma parte de la
+automatización porque elimina activos de GLPI; debe ejecutarse manualmente y
+con aprobación explícita.
 El journal persistente evita duplicados entre ciclos.
 
 `--apply` es el indicador explícito de escritura de este comando. No es

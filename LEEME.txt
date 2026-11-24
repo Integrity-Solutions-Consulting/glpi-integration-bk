@@ -1,36 +1,69 @@
-ETAPA 1: REVISION, SIN SINCRONIZACION NI ESCRITURA
+INTEGRACION AUTOMATICA TMR / INVENTARIO -> GLPI
 
-1. Extraer este paquete en una carpeta tmr-glpi-sync.
-2. Copiar .env.example a .env y completar los valores despues de =.
-   TMR_USER: correo de la cuenta de integracion de TMR.
-   TMR_PASSWORD: su contraseña.
-   GLPI_CLIENT_ID / GLPI_CLIENT_SECRET: cliente OAuth tmr-glpi-sync.
-   GLPI_USER: tmr-sync.
-   GLPI_PASSWORD: contraseña de ese usuario de GLPI.
-   Mantener las URLs y SUPPORT_PROJECT_CODE si son correctos.
-   No publicar .env ni compartirlo en el chat.
-   Compose admite valores entre comillas simples; usarlas si una clave contiene $ o #.
-3. Con Docker Desktop abierto, abrir PowerShell en esta carpeta.
-4. Ejecutar: docker compose run --rm --build revision
+ESTADO
 
-La prueba autentica y consulta por HTTPS. No publica puertos ni se conecta a las bases.
-Solo los dos POST de autenticacion son permitidos por esta implementacion.
-No hay rutas de escritura de usuarios, perfiles o proyectos.
-Los logs solo muestran identificadores y propuestas, no nombres, correos ni claves.
-Son datos internos: compartir solo el resumen y los errores necesarios.
+La automatizacion esta implementada en el servicio `automatizacion` de
+compose.yaml. Ejecuta un ciclo inmediatamente al iniciar y despues cada 5
+minutos por defecto. En cada ciclo sincroniza:
 
-LIMITES
-- No habilita inicio de sesion compartido con TMR.
-- No concede perfiles ni crea grupos/proyectos/usuarios.
-- Una cuenta existente requiere vinculacion explicita, no basta coincidir por correo.
-- Los lideres no exponen IdPersona en la API actual: se proponen candidatos por correo
-  para revision humana; no se concede supervisor automaticamente.
-- La prioridad de proyectos requiere acordar su fuente; no se deduce del nombre.
-- El catalogo GLPI puede no exponer todos los correos; validar contra los datos reales.
-- Esta version se detiene si no entiende la respuesta o la paginacion.
+- usuarios TMR nuevos;
+- proyectos TMR;
+- perfiles GLPI segun los roles TMR;
+- equipos del inventario;
+- detalles de equipos, catalogos, estados, ubicaciones y caracteristicas.
 
-DOKPLOY (DESPUES DE VALIDAR)
-Subir estos fuentes sin .env a un repositorio propio y crear una Application desde Git
-con este Dockerfile. Poner las mismas variables en Environment. No configurar dominio
-ni puertos. Por ahora es una ejecucion unica de revision, no un servicio continuo.
-No modificar el backend TMR ni los Compose actuales de GLPI.
+El intervalo puede cambiarse con `SYNC_INTERVAL_MINUTES`, pero el valor
+recomendado es 5. Los limites de escritura son `SYNC_MAX_WRITES`,
+`EQUIPMENT_MAX_WRITES` y `EQUIPMENT_DETAIL_MAX_WRITES`.
+
+La limpieza de categorias no se ejecuta automaticamente porque puede eliminar
+activos de GLPI. Esa operacion continua siendo manual.
+
+REQUISITOS ANTES DE ACTIVAR
+
+1. Copiar `.env.example` a `.env` y completar las credenciales de TMR,
+   inventario y GLPI. No publicar `.env`.
+2. Habilitar la API REST legacy de GLPI.
+3. Autorizar en el cliente legacy la IP de salida del servidor o contenedor.
+4. Configurar `GLPI_LEGACY_APP_TOKEN` si el cliente legacy lo exige.
+5. Dar a la cuenta de integracion permisos para leer y crear usuarios,
+   proyectos y activos, asignar perfiles y acceder a la entidad raiz.
+6. Mantener `SYNC_DATA_DIR` en un volumen persistente. El diario evita
+   duplicados entre ciclos y debe conservarse privado.
+
+VALIDACION RECOMENDADA
+
+Primero ejecutar una revision sin escritura:
+
+    docker compose run --rm --build revision
+
+Luego hacer una primera alta controlada:
+
+    docker compose run --rm --build transferencia node src/transfer.mjs --apply --max=1
+
+Despues verificar el usuario y sus permisos en GLPI. Para probar equipos de
+forma controlada se pueden usar los comandos de `TRANSFERENCIA.md`.
+
+ACTIVACION CONTINUA
+
+En Dokploy desplegar el servicio `automatizacion`, sin dominio ni puertos.
+Con Docker local:
+
+    docker compose up -d --build automatizacion
+
+Cuando TMR o el inventario tengan informacion nueva, aparecera en GLPI en el
+siguiente ciclo, como maximo 5 minutos despues. No es una notificacion por
+evento instantanea.
+
+LIMITACIONES
+
+- Las cuentas GLPI existentes no se adoptan si no existe una vinculacion segura;
+  quedan para revision.
+- Lideres o perfiles sin equivalencia verificada quedan para revision humana.
+- No se copian contrasenas de TMR ni se habilita inicio de sesion compartido.
+- La automatizacion no elimina activos ni modifica cuentas no vinculadas.
+- Los tickets de GLPI no se crean a partir de cualquier campo de TMR; la
+  sincronizacion actual cubre identidades, proyectos, perfiles y activos.
+
+Para detalles de altas, recuperacion y errores consultar TRANSFERENCIA.md y
+VALIDACION-GLPI.md.
